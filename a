@@ -1,0 +1,118 @@
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Player = Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "Schmeckt_Laser"
+gui.ResetOnSpawn = false
+gui.Parent = Player.PlayerGui
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 200, 0, 160)
+main.Position = UDim2.new(0, 680, 0.5, -80)
+main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+main.Parent = gui
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+local stroke = Instance.new("UIStroke", main)
+stroke.Color = Color3.fromRGB(138, 43, 226)
+stroke.Thickness = 2
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 25)
+title.BackgroundTransparency = 1
+title.Text = "LASER PANEL"
+title.TextColor3 = Color3.fromRGB(138, 43, 226)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 14
+title.Parent = main
+
+local laserBtn = Instance.new("TextButton")
+laserBtn.Size = UDim2.new(0.9, 0, 0, 50)
+laserBtn.Position = UDim2.new(0.05, 0, 0, 35)
+laserBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+laserBtn.Text = "TOGGLE LASER"
+laserBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+laserBtn.Font = Enum.Font.GothamBold
+laserBtn.TextSize = 14
+laserBtn.Parent = main
+Instance.new("UICorner", laserBtn).CornerRadius = UDim.new(0, 6)
+
+local blockBtn = Instance.new("TextButton")
+blockBtn.Size = UDim2.new(0.9, 0, 0, 50)
+blockBtn.Position = UDim2.new(0.05, 0, 0, 95)
+blockBtn.BackgroundColor3 = Color3.fromRGB(80, 40, 100)
+blockBtn.Text = "AUTO BLOCK: OFF"
+blockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+blockBtn.Font = Enum.Font.GothamBold
+blockBtn.TextSize = 12
+blockBtn.Parent = main
+Instance.new("UICorner", blockBtn).CornerRadius = UDim.new(0, 6)
+
+local AutoBlock = false
+
+local function ToggleLaser()
+    local myPlot
+    for _, plot in ipairs(Workspace.Plots:GetChildren()) do
+        for _, obj in ipairs(plot:GetDescendants()) do
+            if obj:IsA("TextLabel") and obj.Text and obj.Text:find(Player.Name) then myPlot = plot break end
+        end
+    end
+    
+    if myPlot and myPlot:FindFirstChild("FriendPanel") then
+        local main = myPlot.FriendPanel:FindFirstChild("Main")
+        local prompt = main and main:FindFirstChildWhichIsA("ProximityPrompt")
+        if prompt then fireproximityprompt(prompt) end
+    end
+end
+
+laserBtn.MouseButton1Click:Connect(ToggleLaser)
+
+blockBtn.MouseButton1Click:Connect(function()
+    AutoBlock = not AutoBlock
+    blockBtn.Text = AutoBlock and "AUTO BLOCK: ON" or "AUTO BLOCK: OFF"
+    blockBtn.BackgroundColor3 = AutoBlock and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(80, 40, 100)
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not AutoBlock then return end
+    local myPlot
+    for _, plot in ipairs(Workspace.Plots:GetChildren()) do
+        for _, obj in ipairs(plot:GetDescendants()) do
+            if obj:IsA("TextLabel") and obj.Text and obj.Text:find(Player.Name) then myPlot = plot break end
+        end
+    end
+    
+    if myPlot and myPlot:FindFirstChild("LaserHitbox") then
+        local laser = myPlot.LaserHitbox:FindFirstChild("Main")
+        if laser then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    if (p.Character.HumanoidRootPart.Position - laser.Position).Magnitude < 20 then
+                        ToggleLaser()
+                        task.wait(1) 
+                    end
+                end
+            end
+        end
+    end
+end)
+
+local dragging, dragStart, startPos
+main.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = i.Position
+        startPos = main.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(i)
+    if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = i.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+end)
